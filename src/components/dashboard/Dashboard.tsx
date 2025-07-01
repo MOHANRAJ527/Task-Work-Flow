@@ -189,7 +189,7 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-emerald-50 to-teal-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-purple-50 to-violet-50">
         <AppSidebar 
           currentFilter={currentFilter}
           onFilterChange={setCurrentFilter}
@@ -207,7 +207,7 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
             <TaskStats tasks={tasks} />
             {loading ? (
               <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
               </div>
             ) : (
               <TaskList 
