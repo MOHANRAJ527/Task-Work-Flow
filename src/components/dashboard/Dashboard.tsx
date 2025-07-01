@@ -8,7 +8,9 @@ import { TaskStats } from "@/components/dashboard/TaskStats";
 import { CreateTaskDialog } from "@/components/dashboard/CreateTaskDialog";
 import ChatBot from "@/components/ai/ChatBot";
 import VoiceAssistant from "@/components/ai/VoiceAssistant";
-import { Task, TaskFilter, TaskPriority, TaskStatus } from "@/types/task";
+import { Task, TaskFilter } from "@/types/task";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardProps {
   user: any;
@@ -19,85 +21,144 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentFilter, setCurrentFilter] = useState<TaskFilter>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Initialize with sample tasks
+  // Fetch tasks from Supabase
   useEffect(() => {
-    const sampleTasks: Task[] = [
-      {
-        id: '1',
-        title: 'Complete project documentation',
-        description: 'Write comprehensive documentation for the TaskFlow project',
-        status: 'in-progress',
-        priority: 'high',
-        dueDate: new Date(Date.now() + 86400000 * 2), // 2 days from now
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: user.id,
-        tags: ['documentation', 'project'],
-        sharedWith: []
-      },
-      {
-        id: '2',
-        title: 'Review pull requests',
-        description: 'Review and merge pending pull requests',
-        status: 'todo',
-        priority: 'medium',
-        dueDate: new Date(Date.now() + 86400000), // 1 day from now
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: user.id,
-        tags: ['code-review'],
-        sharedWith: []
-      },
-      {
-        id: '3',
-        title: 'Implement real-time notifications',
-        description: 'Add WebSocket support for real-time task updates',
-        status: 'todo',
-        priority: 'high',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        userId: user.id,
-        tags: ['feature', 'backend'],
-        sharedWith: []
-      },
-      {
-        id: '4',
-        title: 'Design user onboarding flow',
-        description: 'Create wireframes and mockups for user onboarding',
-        status: 'completed',
-        priority: 'low',
-        createdAt: new Date(Date.now() - 86400000 * 3), // 3 days ago
-        updatedAt: new Date(Date.now() - 86400000), // 1 day ago
-        userId: user.id,
-        tags: ['design', 'ux'],
-        sharedWith: []
+    fetchTasks();
+  }, [user]);
+
+  const fetchTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load tasks",
+          variant: "destructive",
+        });
+      } else {
+        const formattedTasks: Task[] = (data || []).map(task => ({
+          ...task,
+          dueDate: task.due_date ? new Date(task.due_date) : undefined,
+          createdAt: new Date(task.created_at),
+          updatedAt: new Date(task.updated_at),
+          userId: task.user_id,
+          tags: [],
+          sharedWith: []
+        }));
+        setTasks(formattedTasks);
       }
-    ];
-    setTasks(sampleTasks);
-  }, [user.id]);
-
-  const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      userId: user.id
-    };
-    setTasks(prev => [newTask, ...prev]);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, ...updates, updatedAt: new Date() }
-        : task
-    ));
+  const handleCreateTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert([{
+          user_id: user.id,
+          title: taskData.title,
+          description: taskData.description,
+          status: taskData.status,
+          priority: taskData.priority,
+          due_date: taskData.dueDate?.toISOString(),
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create task",
+          variant: "destructive",
+        });
+      } else {
+        const newTask: Task = {
+          ...data,
+          dueDate: data.due_date ? new Date(data.due_date) : undefined,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+          userId: data.user_id,
+          tags: [],
+          sharedWith: []
+        };
+        setTasks(prev => [newTask, ...prev]);
+        toast({
+          title: "Success",
+          description: "Task created successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+  const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: updates.title,
+          description: updates.description,
+          status: updates.status,
+          priority: updates.priority,
+          due_date: updates.dueDate?.toISOString(),
+        })
+        .eq('id', taskId);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update task",
+          variant: "destructive",
+        });
+      } else {
+        setTasks(prev => prev.map(task => 
+          task.id === taskId 
+            ? { ...task, ...updates, updatedAt: new Date() }
+            : task
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete task",
+          variant: "destructive",
+        });
+      } else {
+        setTasks(prev => prev.filter(task => task.id !== taskId));
+        toast({
+          title: "Success",
+          description: "Task deleted successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -121,7 +182,7 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-emerald-50 to-teal-50">
         <AppSidebar 
           currentFilter={currentFilter}
           onFilterChange={setCurrentFilter}
@@ -141,6 +202,7 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
               tasks={filteredTasks}
               onUpdateTask={handleUpdateTask}
               onDeleteTask={handleDeleteTask}
+              loading={loading}
             />
           </div>
         </main>
