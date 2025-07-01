@@ -1,9 +1,16 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, MicOff, Volume2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Extend Window interface to include Speech Recognition APIs
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
 
 const VoiceAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,7 +31,7 @@ const VoiceAssistant = () => {
       return;
     }
 
-    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     
     recognitionRef.current.continuous = false;

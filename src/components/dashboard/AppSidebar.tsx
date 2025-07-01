@@ -33,10 +33,11 @@ const sidebarItems = [
 ];
 
 export function AppSidebar({ currentFilter, onFilterChange, user }: AppSidebarProps) {
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
+    <Sidebar className={isCollapsed ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent className="bg-white border-r">
         {/* User Profile */}
         <div className="p-4 border-b">
@@ -47,7 +48,7 @@ export function AppSidebar({ currentFilter, onFilterChange, user }: AppSidebarPr
                 <User className="h-5 w-5" />
               </AvatarFallback>
             </Avatar>
-            {!collapsed && (
+            {!isCollapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {user?.name}
@@ -75,7 +76,7 @@ export function AppSidebar({ currentFilter, onFilterChange, user }: AppSidebarPr
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {!isCollapsed && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -90,7 +91,7 @@ export function AppSidebar({ currentFilter, onFilterChange, user }: AppSidebarPr
               <SidebarMenuItem>
                 <SidebarMenuButton className="w-full justify-start">
                   <Settings className="h-4 w-4" />
-                  {!collapsed && <span>Settings</span>}
+                  {!isCollapsed && <span>Settings</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
