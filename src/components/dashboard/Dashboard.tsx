@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
@@ -8,7 +7,7 @@ import { TaskStats } from "@/components/dashboard/TaskStats";
 import { CreateTaskDialog } from "@/components/dashboard/CreateTaskDialog";
 import ChatBot from "@/components/ai/ChatBot";
 import VoiceAssistant from "@/components/ai/VoiceAssistant";
-import { Task, TaskFilter } from "@/types/task";
+import { Task, TaskFilter, TaskStatus, TaskPriority } from "@/types/task";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,7 +45,11 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
         });
       } else {
         const formattedTasks: Task[] = (data || []).map(task => ({
-          ...task,
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: (task.status as TaskStatus) || 'todo',
+          priority: (task.priority as TaskPriority) || 'medium', 
           dueDate: task.due_date ? new Date(task.due_date) : undefined,
           createdAt: new Date(task.created_at),
           updatedAt: new Date(task.updated_at),
@@ -86,7 +89,11 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
         });
       } else {
         const newTask: Task = {
-          ...data,
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          status: (data.status as TaskStatus) || 'todo',
+          priority: (data.priority as TaskPriority) || 'medium',
           dueDate: data.due_date ? new Date(data.due_date) : undefined,
           createdAt: new Date(data.created_at),
           updatedAt: new Date(data.updated_at),
@@ -198,12 +205,17 @@ const Dashboard = ({ user, onSignOut }: DashboardProps) => {
           
           <div className="flex-1 p-6 space-y-6">
             <TaskStats tasks={tasks} />
-            <TaskList 
-              tasks={filteredTasks}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-              loading={loading}
-            />
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : (
+              <TaskList 
+                tasks={filteredTasks}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+              />
+            )}
           </div>
         </main>
 
