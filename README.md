@@ -49,3 +49,7 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+
+
+## This project is a part of a hackathon run by
+https://www.katomaran.com
